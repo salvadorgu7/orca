@@ -87,6 +87,9 @@ export function buildTaskWorkspaceCreateParams(args: {
   sparseCheckout?: WorkspaceCreateSparseCheckout
   hostedStartPoint?: WorkspaceCreateHostedStartPoint
   nameIsAutoManaged?: boolean
+  /** A structured Work Item Start owns the first surface, so the host must not also open a
+   *  terminal seeded with the draft — that pane would be a second, unidentifiable writer. */
+  structuredStart?: boolean
 }): WorkspaceCreateParams {
   const {
     item,
@@ -101,7 +104,8 @@ export function buildTaskWorkspaceCreateParams(args: {
     pushTarget,
     sparseCheckout,
     hostedStartPoint,
-    nameIsAutoManaged = true
+    nameIsAutoManaged = true,
+    structuredStart = false
   } = args
   const shouldLaunchAgent = agent !== 'blank'
   const createdWithAgent = shouldLaunchAgent ? (agent as TuiAgent) : undefined
@@ -128,7 +132,7 @@ export function buildTaskWorkspaceCreateParams(args: {
   const common = {
     setupDecision,
     activate: true,
-    ...(shouldLaunchAgent ? { startupDraft: item.source.url } : {}),
+    ...(shouldLaunchAgent && !structuredStart ? { startupDraft: item.source.url } : {}),
     ...(createdWithAgent ? { createdWithAgent } : {}),
     ...(selectedBaseBranch ? { baseBranch: selectedBaseBranch } : {}),
     ...(compareBaseRef ? { compareBaseRef } : {}),

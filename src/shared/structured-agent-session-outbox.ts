@@ -73,7 +73,13 @@ export function requeueStructuredAgentSessionSendRefusal(
   code: AgentSessionWireRefusalCode,
   createOperationId: () => string
 ): StructuredAgentSessionOutboxEntry {
-  if (agentSessionRefusalOperationState('agentSession.send', code) !== 'settled-rejected') {
+  const operationState = agentSessionRefusalOperationState('agentSession.send', code)
+  if (operationState === 'unknown') {
+    // Mesmo `clientMessageId`: reenviar sob outra operação duplicaria a mensagem caso a
+    // original tenha sido aceita. O sentinela -1 impede que a reconciliação a remarque.
+    return { ...entry, state: 'unconfirmed', retryAfterUnknownSubmittedAt: -1 }
+  }
+  if (operationState !== 'settled-rejected') {
     return { ...entry, state: 'queued' }
   }
   return {
