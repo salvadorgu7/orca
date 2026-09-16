@@ -25,6 +25,7 @@ import { removeRuntimeRegisteredRemoteWorktree } from './runtime-registered-remo
 import { removeRuntimeRegisteredLocalWorktree } from './runtime-registered-local-worktree-removal'
 import { removeOrphanOrFolderWorktree } from './orca-runtime-remove-orphan-or-folder-worktree'
 import { deleteRemoteWorktreeHistory } from '../remote-worktree-history-cleanup'
+import { removeWithWorktreeLifecycleHeld } from './runtime-worktree-removal-lifecycle-hold'
 
 export class OrcaRuntimeWithRemoveManagedWorktree extends OrcaRuntimeWithCreateManagedRemoteWorktree {
   async removeManagedWorktree(
@@ -53,8 +54,8 @@ export class OrcaRuntimeWithRemoveManagedWorktree extends OrcaRuntimeWithCreateM
     if (inFlightRemoval) {
       return inFlightRemoval
     }
-    const removal = (async (): Promise<RemoveWorktreeResult & { warning?: string }> => {
-      return withWorktreeSpan({ stage: 'remove', path: removalTarget.path }, async () => {
+    const removal = removeWithWorktreeLifecycleHeld(this, removalTarget.id, () =>
+      withWorktreeSpan({ stage: 'remove', path: removalTarget.path }, async () => {
         const repoOwner = resolveWorktreeRemovalRepoOwner(
           store,
           removalTarget.repoId,
@@ -269,7 +270,7 @@ export class OrcaRuntimeWithRemoveManagedWorktree extends OrcaRuntimeWithCreateM
           }
         })
       })
-    })()
+    )
     this.removeManagedWorktreeInFlight.track(cleanupScopeKey, optionsKey, removal)
     try {
       const result = await removal
